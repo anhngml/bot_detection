@@ -5,19 +5,24 @@ from svm import SVMModel
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
+from sklearn import (manifold, datasets, decomposition, ensemble,
+                     discriminant_analysis, random_projection)
+import matplotlib.pyplot as plt
+
 import argparse
 
 parser = argparse.ArgumentParser(description='Chọn chức năng')
 parser.add_argument('func', nargs='?',
                     help='func name',
-                    default='view_data')
+                    default='validate')
 args = parser.parse_args()
 
 def load_data():
     data = pd.read_csv('data/user_example_features_selected.csv').dropna()
     train_labels = data['TARGET'].values
     train = data.drop(['UserID', 'TARGET'], axis=1)
-    return train.values, train_labels
+    feat_names = data.columns
+    return train.values, train_labels, feat_names
 
 def select_features():
     # df = df.fillna(0)
@@ -47,10 +52,27 @@ def train(X, y):
     model = SVMModel()
     model.fit(X, y)
 
-def validate(X, y):
+def validate(X, y, feat_names, feat1_index = 3, feat2_index = 9):
     model = SVMModel()
     model.load()
     pred = model.predict(X)
+    
+    tsne = manifold.TSNE(n_components=2, init='pca', random_state=0)
+    X_tsne = tsne.fit_transform(X)
+
+    plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c=y, alpha=0.5)
+    plt.title("t-sne")
+    # plt.scatter(C[:, 0], C[:, 1], marker='*', c='#050505', s=1000)
+    plt.show()
+
+    feat1 = feat_names[feat1_index]
+    feat2 = feat_names[feat2_index]
+    plt.scatter(X[:, feat1_index], X[:, feat2_index], c=y, alpha=0.5)
+    plt.xlabel(feat1)
+    plt.ylabel(feat2)
+    plt.title(feat1 + ' - ' + feat2)
+    plt.show()
+
     return accuracy_score(y, pred)
 
 def view_data():
@@ -58,7 +80,7 @@ def view_data():
     train_labels = train['TARGET']
     print(train.head())
 
-    train = train.drop(columns = ['TARGET'])
+    train = train.drop(['UserID', 'TARGET'], axis=1)
 
     fs = FeatureSelector(data = train, labels = train_labels)
 
@@ -121,8 +143,8 @@ if __name__ == "__main__":
         acc = validate(X_test, y_test)
         print(acc)
     elif func_name == 'validate':
-        X, y = load_data()
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
-        acc = validate(X_test, y_test)
+        X, y, feat_names = load_data()
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=42)
+        acc = validate(X_test, y_test, feat_names)
         print(acc)
         
